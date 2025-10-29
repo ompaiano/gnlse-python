@@ -501,7 +501,7 @@ def plot_delay_vs_distance_logarithmic(solver, time_range=None, ax=None,
 
 
 def plot_delay_vs_distance(solver, time_range=None, ax=None, norm=None,
-                           cmap="magma"):
+                           cmap="magma", vmax=None):
     """Plotting normalized intensity in linear scale in time domain.
 
     Parameters
@@ -529,19 +529,21 @@ def plot_delay_vs_distance(solver, time_range=None, ax=None, norm=None,
 
     if norm is None:
         norm = np.max(np.abs(solver.At)**2)
+        if vmax is None:
+            vmax = 1.0
 
     lIT = np.abs(solver.At)**2 / norm
 
-    ax.pcolormesh(solver.t, solver.Z, lIT, shading="auto", vmin=0,
+    im = ax.pcolormesh(solver.t, solver.Z, lIT, shading="auto", vmin=0, vmax=vmax,
                   cmap=cmap)
     ax.set_xlim(time_range)
     ax.set_xlabel("Delay [ps]")
     ax.set_ylabel("Distance [m]")
-    return ax
+    return ax, im
 
 
-def plot_wavelength_vs_distance(solver, WL_range=None, ax=None,
-                                norm=None, cmap="magma"):
+def plot_wavelength_vs_distance(solver, WL_range=None, phase=None, ax=None,
+                                norm=None, cmap="magma", vmax=None):
     """Plotting results in linear scale in wavelength domain.
 
     Parameters
@@ -571,9 +573,23 @@ def plot_wavelength_vs_distance(solver, WL_range=None, ax=None,
 
     if norm is None:
         norm = np.max(np.abs(solver.AW)**2)
-
-    IW = np.fliplr(
-        np.abs(solver.AW)**2 / norm)
+        if vmax is None:
+            vmax = 1.0
+    if phase is None:
+        IW = np.fliplr(
+            np.abs(solver.AW)**2 / norm)
+        vmin = 0.0
+    else:
+        if phase == "deg":
+            IW = np.fliplr(
+                np.angle(solver.AW, deg=True))
+            vmin = -180
+            vmax = 180
+        else:
+            IW = np.fliplr(
+                np.angle(solver.AW, deg=False))
+            vmin = -np.pi
+            vmax = np.pi
     WL = 2 * np.pi * c / solver.W  # wavelength grid
     WL_asc = np.flip(WL, )  # ascending order for interpolation
     iis = np.logical_and(WL_asc > WL_range[0],
@@ -586,12 +602,13 @@ def plot_wavelength_vs_distance(solver, WL_range=None, ax=None,
     newWL = np.linspace(np.min(WL_asc), np.max(WL_asc), IW.shape[1])
     toshow = interpolator(newWL, solver.Z)
 
-    ax.imshow(toshow, origin='lower', aspect='auto', cmap=cmap,
+    im = ax.imshow(toshow, origin='lower', aspect='auto', cmap=cmap,
               extent=[np.min(WL_asc), np.max(WL_asc), 0, np.max(solver.Z)],
-              vmin=0)
+              vmin=vmin, vmax=vmax)
+    
     ax.set_xlabel("Wavelength [nm]")
     ax.set_ylabel("Distance [m]")
-    return ax
+    return ax, im
 
 
 def plot_wavelength_vs_distance_logarithmic(solver, WL_range=None,
